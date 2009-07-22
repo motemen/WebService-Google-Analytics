@@ -154,6 +154,12 @@ WebService::Google::Analytics - A Perl interface to Google Analytics Data Export
 
   use WebService::Google::Analytics;
 
+  my $ga = WebService::Google::Analytics->new(table_id => $table_id, email => $email, password => $password);
+  # or
+  my $ga = WebService::Google::Analytics->new(table_id => $table_id, authorization => $authorization);
+
+  $ga->fetch_data(start => '2009-04-01', end => '2009-04-30', metrics => 'pageviews', dimensions => 'country');
+
 =head1 DESCRIPTION
 
 WebService::Google::Analytics provides access to Google Analytics data.
