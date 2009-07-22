@@ -1,15 +1,154 @@
 package WebService::Google::Analytics;
-
 use strict;
 use warnings;
+use base qw(Class::Accessor::Fast);
+
 our $VERSION = '0.01';
 
+use Carp;
+use LWP::UserAgent;
+use HTTP::Request::Common;
+use URI;
+use XML::Simple qw(XMLin);
+use UNIVERSAL::isa;
+
+__PACKAGE__->mk_accessors(qw(table_id email password ua message authorization));
+
+sub new {
+    my $class = shift;
+    $class->SUPER::new({
+        ua => LWP::UserAgent->new,
+        @_,
+    });
+}
+
+sub _request {
+    my $self = shift;
+    my $req  = shift;
+
+    $self->message(undef);
+
+    my $res = $self->ua->request($req);
+    if ($res->is_error) {
+        $self->message($res->content);
+        return;
+    }
+    $res;
+}
+
+sub login {
+    my $self = shift;
+
+    my $res = $self->_request(
+        POST 'https://www.google.com/accounts/ClientLogin', {
+            Email       => $self->email,
+            Passwd      => $self->password,
+            accountType => 'GOOGLE',
+            source      => "perl-webservice-google-analytics-$VERSION",
+            service     => 'analytics',
+        }
+    ) or return;
+
+    my ($auth) = $res->content =~ /Auth=(.+)/ or return;
+    $self->authorization("GoogleLogin auth=$auth");
+
+    1;
+}
+
+sub fetch_data {
+    my $self = shift;
+    my $uri = $self->_data_feed_uri(@_);
+
+    $self->login unless $self->authorization;
+
+    my $res = $self->_request(
+        GET $uri,
+        Authorization => $self->authorization,
+    ) or return;
+
+    _parse_xml(XMLin($res->content));
+}
+
+sub AUTOLOAD {
+    my $self = shift;
+    my $method = our $AUTOLOAD;
+       $method =~ s/.*:://;
+    return if $method eq 'DESTROY';
+
+    if (my ($metric, $dimension) = $method =~ /^fetch_(\w+?)_by_(\w+)$/) {
+        my $code = sub {
+            my $self = shift;
+            $self->fetch_data(@_, metrics => $metric, dimensions => $dimension);
+        };
+
+        no strict 'refs';
+        *$method = $code;
+
+        return $self->$code(@_);
+    }
+
+    croak "Undefined subroutine $method called";
+}
+
+sub _data_feed_uri {
+    my $self = shift;
+    my %args = @_;
+
+    defined $args{$_} or croak "mandatory parameter $_ was not passed"
+        foreach qw(start end metrics dimensions);
+
+    $args{start} = $args{start}->ymd if UNIVERSAL::isa($args{start}, 'DateTime');
+    $args{end}   = $args{end}->ymd   if UNIVERSAL::isa($args{end},   'DateTime');
+
+    my %query = (
+        ids          => $self->table_id,
+        'start-date' => $args{start},
+        'end-date'   => $args{end},
+        metrics      => "ga:$args{metrics}",
+        dimensions   => "ga:$args{dimensions}",
+    );
+
+    if (my $filters = $args{filters}) {
+        $query{filters} = _parse_filters($filters);
+    }
+
+    my $uri = URI->new('https://www.google.com/analytics/feeds/data');
+    $uri->query_form(%query);
+
+    $uri;
+}
+
+sub _parse_xml {
+    my $xml = shift;
+    my $data;
+
+    my @entries = exists $xml->{entry}->{'dxp:dimension'} ? $xml->{entry} : values %{$xml->{entry}};
+    foreach (@entries) {
+        $data->{ $_->{'dxp:dimension'}->{value} } = $_->{'dxp:metric'}->{value};
+    }
+
+    $data;
+}
+
+sub _parse_filters {
+    my $cond = shift;
+    my @filters;
+
+    while (my ($k, $v) = each %$cond) {
+        my ($op, $value) = ref $v eq 'HASH' ? %$v : ('==', $v);
+        push @filters, "ga:$k" . $op . $value;
+    }
+
+    join ';', @filters; # TODO OR
+}
+
 1;
+
 __END__
 
 =head1 NAME
 
-WebService::Google::Analytics -
+WebService::Google::Analytics - A Perl interface to Google Analytics Data Export API
 
 =head1 SYNOPSIS
 
@@ -17,7 +156,7 @@ WebService::Google::Analytics -
 
 =head1 DESCRIPTION
 
-WebService::Google::Analytics is
+WebService::Google::Analytics provides access to Google Analytics data.
 
 =head1 AUTHOR
 
