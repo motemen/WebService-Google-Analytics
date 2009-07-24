@@ -100,12 +100,15 @@ sub _data_feed_uri {
     $args{start} = $args{start}->ymd if UNIVERSAL::isa($args{start}, 'DateTime');
     $args{end}   = $args{end}->ymd   if UNIVERSAL::isa($args{end},   'DateTime');
 
+    my $metrics    = join ',', map "ga:$_", (ref $args{metrics}    eq 'ARRAY' ? @{$args{metrics}}    : $args{metrics});
+    my $dimensions = join ',', map "ga:$_", (ref $args{dimensions} eq 'ARRAY' ? @{$args{dimensions}} : $args{dimensions});
+
     my %query = (
         ids          => $self->table_id,
         'start-date' => $args{start},
         'end-date'   => $args{end},
-        metrics      => "ga:$args{metrics}",
-        dimensions   => "ga:$args{dimensions}",
+        metrics      => $metrics,
+        dimensions   => $dimensions,
     );
 
     if (my $filters = $args{filters}) {

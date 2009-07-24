@@ -4,7 +4,7 @@ use WebService::Google::Analytics;
 unless ($ENV{GA_EMAIL} && $ENV{GA_PASSWORD} && $ENV{GA_TABLE_ID}) {
     plan skip_all => 'GA_EMAIL, GA_PASSWORD, GA_TABLE_ID not set';
 } else {
-    plan tests => 6;
+    plan tests => 8;
 }
 
 my $ga = WebService::Google::Analytics->new(
@@ -16,16 +16,32 @@ my $ga = WebService::Google::Analytics->new(
 ok $ga->login;
 ok $ga->authorization;
 
-my $result = $ga->fetch_pageviews_by_region(
-    start => '2009-04-01',
-    end   => '2009-04-01',
-    filters => { pagePath => '/' },
-);
+{
+    my $result = $ga->fetch_pageviews_by_region(
+        start => '2009-04-01',
+        end   => '2009-04-01',
+        filters => { pagePath => '/' },
+    );
 
-isa_ok $result, 'ARRAY';
-note explain $result;
+    isa_ok $result, 'ARRAY';
+    note explain $result;
 
-ok not defined $ga->message;
+    ok not defined $ga->message;
+}
+
+{
+    my $result = $ga->fetch_data(
+        start => '2009-04-01',
+        end   => '2009-04-01',
+        metrics    => 'pageviews',
+        dimensions => ['country', 'hour'],
+    );
+
+    isa_ok $result, 'ARRAY';
+    note explain $result;
+
+    ok not defined $ga->message;
+}
 
 ok   !$ga->fetch_invalid_metrics_by_country(start => '2009-04-01', end => '2009-04-01');
 like $ga->message, qr/Invalid value for metrics parameter/;
