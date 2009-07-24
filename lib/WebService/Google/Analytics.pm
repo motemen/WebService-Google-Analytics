@@ -104,7 +104,7 @@ sub _data_feed_uri {
     my $dimensions = join ',', map "ga:$_", (ref $args{dimensions} eq 'ARRAY' ? @{$args{dimensions}} : $args{dimensions});
 
     my %query = (
-        ids          => $self->table_id,
+        ids          => $args{table_id} || $self->table_id,
         'start-date' => $args{start},
         'end-date'   => $args{end},
         metrics      => $metrics,

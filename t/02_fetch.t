@@ -30,7 +30,13 @@ ok $ga->authorization;
 }
 
 {
+    my $ga = WebService::Google::Analytics->new(
+        email    => $ENV{GA_EMAIL},
+        password => $ENV{GA_PASSWORD},
+    );
+
     my $result = $ga->fetch_data(
+        table_id => $ENV{GA_TABLE_ID},
         start => '2009-04-01',
         end   => '2009-04-01',
         metrics    => 'pageviews',
