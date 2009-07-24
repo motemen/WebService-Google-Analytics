@@ -9,7 +9,7 @@ use Carp;
 use LWP::UserAgent;
 use HTTP::Request::Common;
 use URI;
-use XML::Simple qw(XMLin);
+use XML::LibXML;
 use UNIVERSAL::isa;
 
 __PACKAGE__->mk_accessors(qw(table_id email password ua message authorization));
@@ -66,7 +66,7 @@ sub fetch_data {
         Authorization => $self->authorization,
     ) or return;
 
-    _parse_xml(XMLin($res->content));
+    _parse_xml($res->content);
 }
 
 sub AUTOLOAD {
@@ -119,15 +119,17 @@ sub _data_feed_uri {
 }
 
 sub _parse_xml {
-    my $xml = shift;
-    my $data;
+    my $string = shift;
 
-    my @entries = exists $xml->{entry}->{'dxp:dimension'} ? $xml->{entry} : values %{$xml->{entry}};
-    foreach (@entries) {
-        $data->{ $_->{'dxp:dimension'}->{value} } = $_->{'dxp:metric'}->{value};
-    }
+    my $parser = XML::LibXML->new;
+    my $doc = $parser->parse_string($string);
 
-    $data;
+    my @data = map { [
+        map ($_->getAttribute('value'), $_->getElementsByTagName('dxp:dimension')),
+        map ($_->getAttribute('value'), $_->getElementsByTagName('dxp:metric')),
+    ] } $doc->getElementsByTagName('entry');
+
+    \@data;
 }
 
 sub _parse_filters {

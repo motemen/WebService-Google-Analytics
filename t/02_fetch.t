@@ -22,9 +22,10 @@ my $result = $ga->fetch_pageviews_by_region(
     filters => { pagePath => '/' },
 );
 
-isa_ok $result, 'HASH';
+isa_ok $result, 'ARRAY';
 note explain $result;
+
 ok not defined $ga->message;
 
-ok not $ga->fetch_invalid_metrics_by_country(start => '2009-04-01', end => '2009-04-01');
+ok   !$ga->fetch_invalid_metrics_by_country(start => '2009-04-01', end => '2009-04-01');
 like $ga->message, qr/Invalid value for metrics parameter/;
