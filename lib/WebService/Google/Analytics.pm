@@ -139,7 +139,13 @@ sub _parse_filters {
     my $cond = shift;
     my @filters;
 
-    while (my ($k, $v) = each %$cond) {
+    return $cond unless ref $cond;
+
+    my @pairs =
+        ref $cond eq 'ARRAY' ? @$cond :
+        ref $cond eq 'HASH'  ? %$cond : carp 'Cannot handle filter of type ' . ref $cond;
+
+    while (my ($k, $v) = splice @pairs, 0, 2) {
         my ($op, $value) = ref $v eq 'HASH' ? %$v : ('==', $v);
         push @filters, "ga:$k" . $op . $value;
     }

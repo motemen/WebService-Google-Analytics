@@ -26,7 +26,7 @@ ok $ga->authorization;
     isa_ok $result, 'ARRAY';
     note explain $result;
 
-    ok not defined $ga->message;
+    ok not defined $ga->message or diag $ga->message;
 }
 
 {
@@ -46,7 +46,7 @@ ok $ga->authorization;
     isa_ok $result, 'ARRAY';
     note explain $result;
 
-    ok not defined $ga->message;
+    ok not defined $ga->message or diag $ga->message;
 }
 
 ok   !$ga->fetch_invalid_metrics_by_country(start => '2009-04-01', end => '2009-04-01');

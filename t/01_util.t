@@ -37,13 +37,16 @@ sub _data_feed_uri : Test(7) {
     }
 }
 
-sub _parse_filters : Test(3) {
+sub _parse_filters : Test(4) {
     my $code = WebService::Google::Analytics->can('_parse_filters');
 
     is   $code->({ pagePath => '/' }),           'ga:pagePath==/';
     is   $code->({ pagePath => { '=~', '/' } }), 'ga:pagePath=~/';
     like $code->({ pagePath => { '=~', '/' }, country => 'Japan' }),
-         qr<^(ga:pagePath=~/;ja:country==Japan|ga:country==Japan;ga:pagePath=~/)$>
+         qr<^(ga:pagePath=~/;ja:country==Japan|ga:country==Japan;ga:pagePath=~/)$>;
+
+    is   $code->([ source => { '!@', 'hatena.ne.jp' }, source => { '!@', 'hatena.com' } ]),
+        'ga:source!@hatena.ne.jp;ga:source!@hatena.com';
 }
 
 __PACKAGE__->runtests;
